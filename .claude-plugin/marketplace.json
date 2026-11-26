@@ -1,12 +1,12 @@
 {
   "name": "bnmp-consulta",
-  "description": "Skill para Claude Code: consulta de mandados de prisão no BNMP (CNJ).",
+  "description": "Extensão do Claude Desktop e skill do Claude Code: consulta de mandados de prisão no BNMP (CNJ).",
   "owner": { "name": "pedrosoandre" },
   "plugins": [
     {
       "name": "bnmp-consulta",
       "description": "Consulta de mandados de prisão por nome no BNMP (CNJ), com o captcha resolvido pela própria pessoa, e guia para integrar a consulta em qualquer sistema.",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "source": "./",
       "author": { "name": "pedrosoandre" }
     }
