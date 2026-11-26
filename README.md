@@ -60,7 +60,18 @@ sequenceDiagram
 
 **Você resolve o captcha, a skill faz o resto:** preenche o nome, pesquisa, lê as páginas de resultado (até 10 páginas, ou 100 mandados, ajustável), baixa os PDFs, identifica o tribunal pelo número do processo (STF, STJ, TRF, TJ…) e entrega tudo organizado.
 
-## Instalar em 1 minuto
+## Para quem não programa: conector do Claude Desktop
+
+Não precisa de terminal, Python nem Claude Code.
+
+1. Baixe o arquivo **`bnmp-consulta.mcpb`** da página [Releases](https://github.com/pedrosoandre/bnmp-consulta/releases).
+2. No Claude Desktop, vá em **Configurações → Extensões → Configurações avançadas → Instalar extensão…** e escolha o arquivo.
+3. Numa conversa, pergunte: *"Tem mandado de prisão para Maria da Silva? Baixa os PDFs."*
+4. Marque "Não sou um robô" na janela do Edge ou do Chrome que abrir. O Claude traz a tabela, e os PDFs ficam em `Documentos\BNMP consultas`.
+
+O conector funciona no Claude Desktop para Windows e Mac. Não funciona no claude.ai pelo navegador nem no app do celular, porque o captcha precisa de uma janela no seu computador. O código está em [`conector/`](conector).
+
+## Instalar a skill no Claude Code (para quem desenvolve)
 
 No Claude Code:
 
@@ -207,6 +218,9 @@ skills/consulta-mandados-bnmp/
   SKILL.md                          instruções que o Claude segue
   integracao-app.md                 guia para apps web e mobile
   scripts/consulta_bnmp.py          a consulta (um arquivo, só depende do Playwright)
+conector/                           conector (MCP) do Claude Desktop, empacotado como .mcpb
+  server/                           servidor em Node, com o Edge/Chrome já instalados
+  test/                             testes (npm test), sem rede
 tests/                              testes automáticos, sem rede
 ```
 
@@ -215,6 +229,7 @@ tests/                              testes automáticos, sem rede
 ```
 pip install pytest playwright
 python -m pytest -q
+cd conector && npm install && npm test
 ```
 
 ---

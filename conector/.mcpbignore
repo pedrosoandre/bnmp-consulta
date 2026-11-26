@@ -1,0 +1,5 @@
+test/
+ferramentas/
+icone.html
+*.mcpb
+.gitignore
