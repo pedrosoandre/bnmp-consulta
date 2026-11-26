@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { chromium } from 'playwright-core';
-import { URL_PORTAL, API, horaLocalIso, montarResultado, nomeArquivo, urlDaPagina, juntarSemRepetir } from './bnmp.js';
+import { URL_PORTAL, API, horaLocalIso, montarResultado, nomeArquivo, urlDaPagina, juntarSemRepetir, esperarCampoPronto } from './bnmp.js';
 import { rodarLote } from './lote.js';
 
 const CAMPO_NOME = 'input[name="nomePessoa"]';
@@ -115,7 +115,13 @@ async function validarCaptcha(page, esperaCaptchaS) {
 // Pesquisa UM nome na sessÃ£o jÃ¡ validada e devolve o resultado (com PDFs, se pedido).
 async function pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, pastaSaida }, progresso) {
   const campo = page.locator(CAMPO_NOME);
-  await campo.waitFor({ state: 'visible', timeout: 30_000 });
+  await esperarCampoPronto({
+    esperarVisivel: ms => campo.waitFor({ state: 'visible', timeout: ms }),
+    recarregar: async () => {
+      progresso('recarregando_pagina');
+      await page.goto(URL_PORTAL, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    },
+  });
   await campo.fill('');
   await campo.fill(nome);
   const [resp] = await Promise.all([

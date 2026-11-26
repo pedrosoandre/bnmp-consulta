@@ -14,8 +14,8 @@ export class GerenteDeConsulta {
 
   estado() {
     if (!this.atual) return { status: 'ocioso' };
-    const { nome, lote, status, etapa, resultado, erro } = this.atual;
-    return { status, nome, lote: !!lote, etapa, resultado, erro };
+    const { nome, lote, status, etapa, resultado, erro, formato } = this.atual;
+    return { status, nome, lote: !!lote, etapa, resultado, erro, formato };
   }
 
   // Dispara um trabalho em segundo plano (consulta única ou lote) e devolve o estado inicial.
@@ -39,7 +39,7 @@ export class GerenteDeConsulta {
     const limpo = validarNome(nome);
     this._exigirLivre();
     const controle = new AbortController();
-    const c = { id: ++this.seq, nome: limpo, lote: false, status: 'em_andamento', etapa: 'abrindo_navegador', controle };
+    const c = { id: ++this.seq, nome: limpo, lote: false, status: 'em_andamento', etapa: 'abrindo_navegador', controle, formato: opcoes.formato };
     return this._iniciarTrabalho(c, (progresso, sinal) => this.executar(limpo, { ...opcoes, sinal }, progresso));
   }
 

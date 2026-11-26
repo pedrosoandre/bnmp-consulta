@@ -125,3 +125,19 @@ export function juntarSemRepetir(paginas) {
     }),
   }));
 }
+
+/**
+ * Garante o campo de busca pronto. Se não aparecer (glitch de render entre dois nomes),
+ * recarrega o portal UMA vez e tenta de novo — a sessão segue válida, então não pede captcha.
+ * `esperarVisivel(ms)` espera o campo; `recarregar()` dá um page.goto no portal.
+ * @param {{esperarVisivel: (ms:number)=>Promise<void>, recarregar: ()=>Promise<void>, msCurto?: number, msAposReload?: number}} p
+ */
+export async function esperarCampoPronto({ esperarVisivel, recarregar, msCurto = 15_000, msAposReload = 20_000 }) {
+  try {
+    await esperarVisivel(msCurto);
+  } catch (e) {
+    if (e.name !== 'TimeoutError') throw e; // só o timeout do campo é recuperável com reload
+    await recarregar();
+    await esperarVisivel(msAposReload); // segunda e última tentativa; se falhar, propaga
+  }
+}

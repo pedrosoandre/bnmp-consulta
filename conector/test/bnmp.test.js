@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validarNome, ufDe, tribunalDe, resumir, montarResultado, nomeArquivo, urlDaPagina, juntarSemRepetir,
+  esperarCampoPronto,
 } from '../server/bnmp.js';
 import { GerenteDeConsulta } from '../server/gerente.js';
 
@@ -93,6 +94,44 @@ test('juntarSemRepetir descarta mandado repetido entre páginas', () => {
   assert.deepEqual(pags.flatMap(p => p.content).map(i => i.id), [123456, 7]);
 });
 
+// ------------------------------------------------- esperarCampoPronto ---
+// Se o campo de busca não reaparece (glitch de render entre dois nomes do lote),
+// recarrega o portal UMA vez — a sessão segue válida, então o campo volta sem captcha.
+const erroTimeout = () => { const e = new Error('locator.waitFor: Timeout 15000ms exceeded.'); e.name = 'TimeoutError'; return e; };
+
+test('esperarCampoPronto: campo visível de primeira não recarrega', async () => {
+  let recarregou = 0, vezes = 0;
+  await esperarCampoPronto({ esperarVisivel: async () => { vezes++; }, recarregar: async () => { recarregou++; } });
+  assert.equal(vezes, 1);
+  assert.equal(recarregou, 0);
+});
+
+test('esperarCampoPronto: timeout recarrega uma vez e tenta de novo', async () => {
+  let recarregou = 0, vezes = 0;
+  await esperarCampoPronto({
+    esperarVisivel: async () => { vezes++; if (vezes === 1) throw erroTimeout(); },
+    recarregar: async () => { recarregou++; },
+  });
+  assert.equal(recarregou, 1);
+  assert.equal(vezes, 2); // uma antes do reload, outra depois
+});
+
+test('esperarCampoPronto: se falhar mesmo após recarregar, propaga o timeout', async () => {
+  let recarregou = 0;
+  await assert.rejects(
+    esperarCampoPronto({ esperarVisivel: async () => { throw erroTimeout(); }, recarregar: async () => { recarregou++; } }),
+    /Timeout/);
+  assert.equal(recarregou, 1); // recarregou exatamente uma vez, não em loop
+});
+
+test('esperarCampoPronto: erro que não é timeout sobe na hora, sem recarregar', async () => {
+  let recarregou = 0;
+  await assert.rejects(
+    esperarCampoPronto({ esperarVisivel: async () => { throw new Error('página fechada'); }, recarregar: async () => { recarregou++; } }),
+    /fechada/);
+  assert.equal(recarregou, 0);
+});
+
 // ---------------------------------------------------------------- gerente ---
 
 const esperar = ms => new Promise(r => setTimeout(r, ms));
@@ -115,6 +154,14 @@ test('gerente: aguardar volta assim que terminar, sem gastar o prazo todo', asyn
   const t = Date.now();
   const e = await g.aguardar(5000);
   assert.equal(e.status, 'concluida'); assert.ok(Date.now() - t < 1000);
+});
+
+test('gerente: guarda o formato pedido e o devolve no estado', async () => {
+  const g = new GerenteDeConsulta({ executar: async () => ({ busca: 'Maria', total_no_portal: 0, mandados: [] }) });
+  g.iniciar('Maria da Silva', { formato: 'curto' });
+  assert.equal(g.estado().formato, 'curto');
+  await g.aguardar(100);
+  assert.equal(g.estado().formato, 'curto'); // persiste até o fim
 });
 
 test('gerente: uma consulta por vez (sem sessões em paralelo)', () => {

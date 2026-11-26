@@ -43,6 +43,22 @@ export function formatarEstado(e) {
   return linhas.join('\n');
 }
 
+/**
+ * Resposta curta de um nome só: SIM/NÃO com o mínimo para não induzir erro.
+ * "SIM" conta os mandados do NOME (podem ser homônimos); "NÃO" não é certidão negativa.
+ */
+export function respostaCurta(r) {
+  const nome = r.busca;
+  if (!r.total_no_portal) {
+    return `${nome}\nNÃO — nada no BNMP para esse nome nesta data. (Não é certidão negativa.)`;
+  }
+  const tribs = [...new Set((r.mandados || []).map(m => m.tribunal).filter(Boolean))];
+  const tribTxt = tribs.length ? ` (${tribs.slice(0, 4).join(', ')}${tribs.length > 4 ? '…' : ''})` : '';
+  const n = r.total_no_portal;
+  return `${nome}\nSIM — ${n} mandado${n === 1 ? '' : 's'} no nome${tribTxt}.\n` +
+    'Homônimos são comuns: confira nome da mãe e data de nascimento antes de concluir.';
+}
+
 const AVISO_LOTE = 'Busca por nome no BNMP: homônimos são comuns. Antes de agir sobre qualquer nome desta lista, ' +
   'confira nome da mãe, data de nascimento e número do processo. "Nada encontrado" não é certidão negativa.';
 

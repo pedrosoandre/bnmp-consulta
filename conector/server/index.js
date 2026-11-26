@@ -8,7 +8,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { GerenteDeConsulta } from './gerente.js';
 import { criarExecutor, criarExecutorLote } from './consulta.js';
-import { formatarEstado, formatarLote } from './texto.js';
+import { formatarEstado, formatarLote, respostaCurta } from './texto.js';
 
 function pastaDeSaida() {
   const v = (process.env.BNMP_PASTA || '').trim();
@@ -23,7 +23,7 @@ const gerente = new GerenteDeConsulta({
 });
 const ESPERA_POR_CHAMADA_MS = 40_000;
 
-const server = new McpServer({ name: 'bnmp-consulta', version: '0.2.1' });
+const server = new McpServer({ name: 'bnmp-consulta', version: '0.3.0' });
 const texto = t => ({ content: [{ type: 'text', text: t }] });
 
 server.registerTool('consultar_mandados_bnmp', {
@@ -38,11 +38,12 @@ server.registerTool('consultar_mandados_bnmp', {
     nome: z.string().describe('Nome completo da pessoa'),
     baixar_pdfs: z.boolean().optional().describe('Baixar o PDF oficial de cada mandado (padrão: não)'),
     max_paginas: z.number().int().min(1).max(10).optional().describe('Páginas de resultado a ler, 10 mandados cada (padrão 3)'),
+    resposta_curta: z.boolean().optional().describe('Responder só SIM/NÃO (com nº de mandados e aviso de homônimo), sem a tabela. Use quando a pessoa só quer saber se há mandado para o nome.'),
   },
   annotations: { readOnlyHint: false, openWorldHint: true, idempotentHint: false, destructiveHint: false },
-}, async ({ nome, baixar_pdfs, max_paginas }) => {
+}, async ({ nome, baixar_pdfs, max_paginas, resposta_curta }) => {
   try {
-    gerente.iniciar(nome, { baixarPdfs: !!baixar_pdfs, maxPaginas: max_paginas ?? 3 });
+    gerente.iniciar(nome, { baixarPdfs: !!baixar_pdfs, maxPaginas: max_paginas ?? 3, formato: resposta_curta ? 'curto' : 'completo' });
   } catch (e) {
     return { ...texto(String(e.message)), isError: true };
   }
@@ -62,7 +63,9 @@ server.registerTool('resultado_consulta_bnmp', {
   annotations: { readOnlyHint: true, openWorldHint: false },
 }, async () => {
   const e = await gerente.aguardar(ESPERA_POR_CHAMADA_MS);
-  const txt = e.lote ? formatarLote(e) : formatarEstado(e);
+  const txt = (e.status === 'concluida' && !e.lote && e.formato === 'curto')
+    ? respostaCurta(e.resultado)
+    : (e.lote ? formatarLote(e) : formatarEstado(e));
   return { ...texto(txt), isError: e.status === 'erro' };
 });
 

@@ -38,6 +38,35 @@ test('com mandados monta tabela, escapa | e mostra avisos e arquivos', () => {
   assert.match(t, /Baixei 20\./); assert.match(t, /C:\/x\/c\.json/); assert.match(t, /homônimos/);
 });
 
+import { respostaCurta } from '../server/texto.js';
+
+test('respostaCurta: com mandado diz SIM, quantos, tribunais e o aviso de homônimo', () => {
+  const t = respostaCurta({ busca: 'Joana Pereira Lima', total_no_portal: 1,
+    mandados: [{ tribunal: 'STF' }] });
+  assert.match(t, /^Joana Pereira Lima/);
+  assert.match(t, /SIM/);
+  assert.match(t, /\b1 mandado\b/);     // singular
+  assert.match(t, /STF/);
+  assert.match(t, /hom[oô]nimo/i);
+  assert.match(t, /m[aã]e/i);
+});
+
+test('respostaCurta: plural e vários tribunais distintos (sem repetir)', () => {
+  const t = respostaCurta({ busca: 'Jose Carlos da Silva', total_no_portal: 163,
+    mandados: [{ tribunal: 'TJSP' }, { tribunal: 'TJSP' }, { tribunal: 'TJMG' }] });
+  assert.match(t, /\b163 mandados\b/);
+  assert.match(t, /TJSP/);
+  assert.match(t, /TJMG/);
+  assert.equal((t.match(/TJSP/g) || []).length, 1); // tribunal não repete
+});
+
+test('respostaCurta: sem mandado diz NÃO e que não é certidão negativa', () => {
+  const t = respostaCurta({ busca: 'Luiz Inacio Lula da Silva', total_no_portal: 0, mandados: [] });
+  assert.match(t, /^Luiz Inacio Lula da Silva/);
+  assert.match(t, /N[ÃA]O/);
+  assert.match(t, /certid[ãa]o negativa/i);
+});
+
 import { formatarLote } from '../server/texto.js';
 
 const loteOk = {
