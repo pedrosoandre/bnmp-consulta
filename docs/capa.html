@@ -2,78 +2,79 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f4f1ea; --paper: #fffdf8; --ink: #1d1b17; --muted: #6b665c; --line: #e3ddd0;
-    --clay: #c96442; --clay-soft: #f3e3da; --ok: #2f7d4f; --warn: #b5541c;
+    --clay: #c96442; --orange: #e8742a; --orange-d: #b8551a; --orange-l: #f59a52; --ok: #2f7d4f; --warn: #b5541c;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1280px; height: 640px; overflow: hidden; background: var(--bg); }
-  body { font-family: 'Inter Tight', sans-serif; color: var(--ink); position: relative; }
-  .wrap { position: absolute; inset: 0; display: grid; grid-template-columns: 540px 1fr; gap: 48px; padding: 64px 64px 56px 72px; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; }
+  body { font-family: 'Inter Tight', sans-serif; color: var(--ink); position: relative;
+    background: radial-gradient(800px 500px at 80% 40%, #fbf6ec, transparent 70%), var(--bg); }
 
-  .eyebrow { display: inline-flex; align-items: center; gap: 10px; font: 600 13px/1 'JetBrains Mono', monospace;
-    letter-spacing: .12em; text-transform: uppercase; color: var(--clay);
-    padding: 9px 14px; border: 1.5px solid var(--clay); border-radius: 999px; }
-  h1 { margin-top: 28px; font: 600 54px/1.04 'Source Serif 4', serif; letter-spacing: -.015em; }
-  h1 em { font-style: normal; color: var(--clay); }
-  .sub { margin-top: 22px; font-size: 20px; line-height: 1.45; color: #45413a; max-width: 480px; }
+  .left { position: absolute; left: 64px; top: 56px; width: 560px; }
+  .eyebrow { display: inline-block; font: 600 13px/1 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--clay); padding: 10px 16px; border: 1.5px solid var(--clay); border-radius: 999px; }
+  h1 { margin-top: 26px; font: 700 60px/1.04 'Source Serif 4', serif; letter-spacing: -.018em; }
+  h1 .c { color: var(--clay); }
+  .sub { margin-top: 24px; font-size: 21px; line-height: 1.45; color: #3d3932; }
   .sub b { color: var(--ink); }
-  .steps { margin-top: 30px; display: grid; gap: 10px; }
-  .step { display: flex; gap: 12px; align-items: center; font-size: 16.5px; color: #3a362f; }
-  .step span { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--bg);
-    font: 700 13px/26px 'JetBrains Mono', monospace; text-align: center; flex: none; }
-  .foot { position: absolute; left: 72px; bottom: 30px; font-size: 12.5px; color: var(--muted); }
+  .steps { margin-top: 28px; display: grid; gap: 13px; }
+  .step { display: flex; gap: 14px; align-items: center; font-size: 18px; color: #2f2c26; }
+  .step span { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--bg);
+    font: 700 14px/28px 'JetBrains Mono', monospace; text-align: center; flex: none; }
+  .foot { position: absolute; left: 64px; bottom: 24px; font-size: 12.5px; color: var(--muted); }
 
-  .app { align-self: center; background: var(--paper); border: 1px solid var(--line); border-radius: 18px;
-    box-shadow: 0 30px 60px -20px rgba(60,45,20,.28), 0 2px 6px rgba(60,45,20,.06); overflow: hidden; }
-  .bar { display: flex; align-items: center; gap: 8px; padding: 13px 18px; border-bottom: 1px solid var(--line); background: #faf7f0; }
+  .app { position: absolute; left: 676px; top: 110px; width: 548px; background: var(--paper); border: 1px solid var(--line);
+    border-radius: 18px; box-shadow: 0 34px 70px -24px rgba(70,45,15,.32), 0 2px 6px rgba(60,45,20,.06); overflow: hidden; }
+  .bar { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line); background: #faf6ee; }
   .bar i { width: 11px; height: 11px; border-radius: 50%; background: #ddd5c6; }
-  .bar b { margin-left: 10px; font: 600 13.5px 'Inter Tight'; color: #4a463e; }
-  .bar small { margin-left: auto; font: 500 12px 'JetBrains Mono', monospace; color: var(--clay);
-    background: var(--clay-soft); padding: 5px 9px; border-radius: 7px; }
-  .chat { padding: 22px 24px 24px; display: grid; gap: 16px; }
-  .me { justify-self: end; background: #ede7db; padding: 12px 16px; border-radius: 14px 14px 4px 14px; font-size: 16px; max-width: 80%; }
-  .tool { display: inline-flex; gap: 8px; align-items: center; font: 500 12.5px 'JetBrains Mono', monospace; color: #5d584e;
-    border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; background: #fbf8f2; justify-self: start; }
+  .bar b { margin-left: 10px; font: 600 14px 'Inter Tight'; color: #3f3b34; }
+  .chat { padding: 20px 22px 22px; display: grid; gap: 15px; }
+  .me { justify-self: end; background: #ede7db; padding: 12px 16px; border-radius: 14px 14px 4px 14px; font-size: 16px; }
+  .tool { display: inline-flex; gap: 9px; align-items: center; font: 500 12.5px 'JetBrains Mono', monospace; color: #514c43;
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; background: #fbf8f2; justify-self: start; }
   .tool i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .tool em { font-style: normal; color: var(--clay); font-weight: 600; }
   .ans { font-size: 15.5px; line-height: 1.5; color: #2c2924; }
-  .ans b.sim { color: var(--warn); }
-  table { margin-top: 10px; width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .ans b { color: var(--warn); }
+  table { margin-top: 8px; width: 100%; border-collapse: collapse; font-size: 13.5px; }
   th { text-align: left; font-weight: 600; color: var(--muted); padding: 7px 8px; border-bottom: 1px solid var(--line); }
   td { padding: 8px; border-bottom: 1px solid #efe9de; }
   .tag { font-size: 12px; font-weight: 600; color: var(--warn); background: #fbe9dc; padding: 3px 7px; border-radius: 6px; }
-  .note { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .note { margin-top: 9px; font-size: 13px; color: var(--muted); }
+
+  svg { position: absolute; overflow: visible; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div>
-    <div class="eyebrow">Extensão para o Claude Desktop</div>
-    <h1>Mandados de prisão do CNJ, <em>direto na conversa com o Claude</em></h1>
-    <p class="sub">Pergunte pelo nome. Você marca o captcha; o Claude consulta o <b>BNMP</b> e traz a tabela e os <b>PDFs oficiais</b>.</p>
-    <div class="steps">
-      <div class="step"><span>1</span>Instale o arquivo .mcpb no Claude Desktop</div>
-      <div class="step"><span>2</span>Pergunte: "tem mandado para Fulano?"</div>
-      <div class="step"><span>3</span>Marque "Não sou um robô" e pronto</div>
-    </div>
+<div class="left">
+  <div class="eyebrow">Conector para o Claude Desktop</div>
+  <h1><span class="c">Conector</span> direto no <span class="c">Claude</span> para <span class="c">mandados de prisão</span></h1>
+  <p class="sub">Pergunte pelo nome. Você marca o captcha; o Claude consulta o <b>BNMP do CNJ</b> e traz a tabela e os <b>PDFs oficiais</b>.</p>
+  <div class="steps">
+    <div class="step"><span>1</span>Instale o conector no Claude Desktop</div>
+    <div class="step"><span>2</span>Pergunte: "tem mandado para Fulano?"</div>
+    <div class="step"><span>3</span>Marque "Não sou um robô" e receba o resultado</div>
   </div>
-  <div class="app">
-    <div class="bar"><i></i><i></i><i></i><b>Claude</b><small>BNMP – Mandados de Prisão</small></div>
-    <div class="chat">
-      <div class="me">Tem mandado de prisão para Maria da Silva?</div>
-      <div class="tool"><i></i>consultar_mandados_bnmp · captcha marcado por você</div>
-      <div class="ans"><b class="sim">Sim, 1 mandado</b> no nome, no portal do BNMP:
-        <table>
-          <tr><th>Situação</th><th>Tribunal</th><th>Expedição</th><th>Mãe</th></tr>
-          <tr><td><span class="tag">Pendente</span></td><td>TJSP</td><td>05/03/2024</td><td>Ana da Silva</td></tr>
-        </table>
-        <div class="note">Homônimos são comuns: confira mãe e nascimento. PDF salvo em Documentos.</div>
-      </div>
+</div>
+
+<div class="app">
+  <div class="bar"><i></i><i></i><i></i><b>Claude · conector BNMP – Mandados de Prisão</b></div>
+  <div class="chat">
+    <div class="me">Tem mandado de prisão para Maria da Silva?</div>
+    <div class="tool"><i></i><em>conector BNMP</em> · consultar_mandados_bnmp</div>
+    <div class="ans"><b>Sim, 1 mandado</b> no nome, no portal do BNMP:
+      <table>
+        <tr><th>Situação</th><th>Tribunal</th><th>Expedição</th><th>Mãe</th></tr>
+        <tr><td><span class="tag">Pendente</span></td><td>TJSP</td><td>05/03/2024</td><td>Ana da Silva</td></tr>
+      </table>
+      <div class="note">Homônimos são comuns: confira mãe e nascimento. PDF salvo.</div>
     </div>
   </div>
 </div>
-<div class="foot">Projeto independente e de código aberto (MIT). Sem vínculo com o CNJ nem com a Anthropic. Dados fictícios.</div>
+
+<div class="foot">Projeto independente e de código aberto (MIT). Sem vínculo com o CNJ nem com a Anthropic. Claude é marca da Anthropic. Dados fictícios.</div>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/capa.png" alt="BNMP – Mandados de Prisão: extensão para o Claude Desktop" width="100%">
+  <img src="docs/capa.png" alt="Conector BNMP – Mandados de Prisão para o Claude Desktop" width="100%">
 </p>
 
 <p align="center">
@@ -15,7 +15,7 @@
 
 O **BNMP** (Banco Nacional de Medidas Penais e Prisões, do CNJ) é a fonte oficial dos mandados de prisão expedidos por todos os tribunais do Brasil. É público, mas foi feito para consulta manual: uma tela, um captcha, uma pessoa de cada vez.
 
-Esta **extensão para o Claude Desktop** coloca o BNMP dentro da conversa:
+Este **conector do Claude Desktop** coloca o BNMP dentro da conversa. (No Claude Desktop, conectores locais como este são instalados como **extensões**, por isso o arquivo é um `.mcpb`.)
 
 > **Você:** Tem mandado de prisão para Maria da Silva? Baixa os PDFs.
 >
