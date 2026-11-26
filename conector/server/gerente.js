@@ -4,33 +4,54 @@
 import { validarNome } from './bnmp.js';
 
 export class GerenteDeConsulta {
-  /** @param {{executar: (nome: string, opcoes: object, progresso: (etapa: string) => void) => Promise<object>}} deps */
-  constructor({ executar }) {
+  /** @param {{executar: Function, executarLote?: Function}} deps */
+  constructor({ executar, executarLote }) {
     this.executar = executar;
-    this.atual = null; // {id, nome, status, etapa, resultado, erro, promessa, controle}
+    this.executarLote = executarLote;
+    this.atual = null; // {id, nome, lote, status, etapa, resultado, erro, promessa, controle}
     this.seq = 0;
   }
 
   estado() {
     if (!this.atual) return { status: 'ocioso' };
-    const { nome, status, etapa, resultado, erro } = this.atual;
-    return { status, nome, etapa, resultado, erro };
+    const { nome, lote, status, etapa, resultado, erro } = this.atual;
+    return { status, nome, lote: !!lote, etapa, resultado, erro };
+  }
+
+  // Dispara um trabalho em segundo plano (consulta única ou lote) e devolve o estado inicial.
+  _iniciarTrabalho(c, tarefa) {
+    this.atual = c;
+    const progresso = etapa => { if (this.atual === c && c.status === 'em_andamento') c.etapa = etapa; };
+    // new Promise chama o executor já agora (não no próximo tick): um cancelar() logo em seguida o alcança.
+    c.promessa = new Promise(r => r(tarefa(progresso, c.controle.signal)))
+      .then(res => { if (this.atual === c) { c.status = 'concluida'; c.resultado = res; c.etapa = 'fim'; } },
+            err => { if (this.atual === c) { c.status = 'erro'; c.erro = String(err && err.message || err); c.etapa = 'fim'; } });
+    return this.estado();
+  }
+
+  _exigirLivre() {
+    if (this.atual && this.atual.status === 'em_andamento') {
+      throw new Error(`Já existe uma consulta em andamento (${this.atual.nome}). Aguarde ou cancele antes de começar outra.`);
+    }
   }
 
   iniciar(nome, opcoes = {}) {
     const limpo = validarNome(nome);
-    if (this.atual && this.atual.status === 'em_andamento') {
-      throw new Error(`Já existe uma consulta em andamento (${this.atual.nome}). Aguarde ou cancele antes de começar outra.`);
-    }
+    this._exigirLivre();
     const controle = new AbortController();
-    const c = { id: ++this.seq, nome: limpo, status: 'em_andamento', etapa: 'abrindo_navegador', controle };
-    this.atual = c;
-    const progresso = etapa => { if (this.atual === c && c.status === 'em_andamento') c.etapa = etapa; };
-    // new Promise chama o executor já agora (não no próximo tick): um cancelar() logo em seguida o alcança.
-    c.promessa = new Promise(r => r(this.executar(limpo, { ...opcoes, sinal: controle.signal }, progresso)))
-      .then(res => { if (this.atual === c) { c.status = 'concluida'; c.resultado = res; c.etapa = 'fim'; } },
-            err => { if (this.atual === c) { c.status = 'erro'; c.erro = String(err && err.message || err); c.etapa = 'fim'; } });
-    return this.estado();
+    const c = { id: ++this.seq, nome: limpo, lote: false, status: 'em_andamento', etapa: 'abrindo_navegador', controle };
+    return this._iniciarTrabalho(c, (progresso, sinal) => this.executar(limpo, { ...opcoes, sinal }, progresso));
+  }
+
+  iniciarLote(nomes, opcoes = {}) {
+    if (!Array.isArray(nomes) || nomes.length === 0) throw new Error('Lista vazia: informe ao menos um nome.');
+    const validos = nomes.filter(n => { try { validarNome(n); return true; } catch { return false; } });
+    if (validos.length === 0) throw new Error('Nenhum nome válido na lista (verifique curingas e nomes muito curtos).');
+    this._exigirLivre();
+    const controle = new AbortController();
+    const rotulo = `lote (${validos.length} nome${validos.length > 1 ? 's' : ''})`;
+    const c = { id: ++this.seq, nome: rotulo, lote: true, status: 'em_andamento', etapa: 'abrindo_navegador', controle };
+    return this._iniciarTrabalho(c, (progresso, sinal) => this.executarLote(nomes, { ...opcoes, sinal }, progresso));
   }
 
   /** Espera até `ms` pelo fim da consulta e devolve o estado (sem gastar o prazo se terminar antes). */

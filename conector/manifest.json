@@ -2,26 +2,52 @@
   "manifest_version": "0.3",
   "name": "bnmp-consulta",
   "display_name": "BNMP – Mandados de Prisão",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "description": "Consulta mandados de prisão por nome no BNMP (CNJ). Você marca o captcha; o Claude traz a tabela e os PDFs.",
   "long_description": "Consulta o Banco Nacional de Medidas Penais e Prisões (BNMP), do CNJ, pelo nome da pessoa. O conector abre o portal oficial numa janela do Edge ou do Chrome no seu computador; você marca \"Não sou um robô\" e ele preenche o nome, pesquisa, organiza os mandados (número, situação, peça, tribunal, órgão, datas, filiação) e, se você pedir, baixa o PDF oficial de cada um. O captcha é sempre resolvido por você: nada de quebra de captcha, navegador oculto ou coleta em massa. Busca por nome: confira homônimos. Projeto independente, sem vínculo com o CNJ.",
-  "author": { "name": "pedrosoandre" },
+  "author": {
+    "name": "pedrosoandre"
+  },
   "license": "MIT",
   "icon": "icon.png",
-  "keywords": ["bnmp", "cnj", "mandado de prisão", "compliance", "due diligence", "brasil"],
+  "keywords": [
+    "bnmp",
+    "cnj",
+    "mandado de prisão",
+    "compliance",
+    "due diligence",
+    "brasil"
+  ],
   "server": {
     "type": "node",
     "entry_point": "server/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/index.js"],
-      "env": { "BNMP_PASTA": "${user_config.pasta_saida}" }
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
+      "env": {
+        "BNMP_PASTA": "${user_config.pasta_saida}"
+      }
     }
   },
   "tools": [
-    { "name": "consultar_mandados_bnmp", "description": "Começa uma consulta por nome: abre o portal do BNMP para você marcar o captcha." },
-    { "name": "resultado_consulta_bnmp", "description": "Traz o andamento ou o resultado da consulta (tabela, avisos e PDFs)." },
-    { "name": "cancelar_consulta_bnmp", "description": "Cancela a consulta em andamento e fecha a janela." }
+    {
+      "name": "consultar_mandados_bnmp",
+      "description": "Começa uma consulta por nome: abre o portal do BNMP para você marcar o captcha."
+    },
+    {
+      "name": "consultar_mandados_bnmp_em_lote",
+      "description": "Consulta vários nomes numa só janela: um captcha vale para até 10 nomes."
+    },
+    {
+      "name": "resultado_consulta_bnmp",
+      "description": "Traz o andamento ou o resultado da consulta (tabela, avisos e PDFs)."
+    },
+    {
+      "name": "cancelar_consulta_bnmp",
+      "description": "Cancela a consulta em andamento e fecha a janela."
+    }
   ],
   "user_config": {
     "pasta_saida": {
@@ -32,7 +58,12 @@
     }
   },
   "compatibility": {
-    "platforms": ["win32", "darwin"],
-    "runtimes": { "node": ">=18.0.0" }
+    "platforms": [
+      "win32",
+      "darwin"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
   }
 }

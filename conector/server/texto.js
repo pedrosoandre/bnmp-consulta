@@ -42,3 +42,53 @@ export function formatarEstado(e) {
   linhas.push('', r.aviso);
   return linhas.join('\n');
 }
+
+const AVISO_LOTE = 'Busca por nome no BNMP: homônimos são comuns. Antes de agir sobre qualquer nome desta lista, ' +
+  'confira nome da mãe, data de nascimento e número do processo. "Nada encontrado" não é certidão negativa.';
+
+export function formatarLote(e) {
+  if (e.status === 'em_andamento') {
+    const etapa = e.etapa || '';
+    const captcha = /aguardando_captcha/.test(etapa)
+      ? 'Marque "Não sou um robô" na janela do portal (um captcha vale para vários nomes). ' : '';
+    return `status: em_andamento (${etapa}). ${captcha}Chame resultado_consulta_bnmp de novo.`;
+  }
+  if (e.status === 'erro') return `O lote falhou: ${e.erro}`;
+
+  const r = e.resultado;
+  const s = r.resumo;
+  const falhasResumo = s.falhas ? `${s.falhas} falha(s) de portal, ` : '';
+  const linhas = [
+    `Lote concluído: ${s.pedidos} nome(s) pedido(s), ${s.consultados} consultado(s), ${s.com_mandado} com mandado, ` +
+    `${s.invalidos} inválido(s), ${falhasResumo}em ${s.captchas} captcha${s.captchas === 1 ? '' : 's'}.`,
+  ];
+  if (r.interrompido) linhas.push(`Interrompido: ${r.motivo}`);
+  if (r.cancelado) linhas.push('Lote cancelado antes do fim.');
+
+  const comMandado = r.resultados.filter(x => x.resultado && x.resultado.total_no_portal > 0);
+  if (comMandado.length) {
+    linhas.push('', 'Com mandado:', '', '| Nome pesquisado | Número | Situação | Peça | Tribunal | PDF |', '|---|---|---|---|---|---|');
+    for (const x of comMandado) {
+      for (const m of x.resultado.mandados) {
+        linhas.push(`| ${cel(x.nome)} | ${cel(m.numero)} | ${cel(m.situacao)} | ${cel(m.peca)} | ${cel(m.tribunal)} | ${m.pdf ? cel(m.pdf) : '—'} |`);
+      }
+    }
+  }
+
+  const semNada = r.resultados.filter(x => x.resultado && x.resultado.total_no_portal === 0).map(x => x.nome);
+  if (semNada.length) linhas.push('', `Nada encontrado (${semNada.length}): ${semNada.join('; ')}.`);
+
+  const invalidos = r.resultados.filter(x => x.erro);
+  if (invalidos.length) linhas.push('', `Não pesquisados por nome inválido: ${invalidos.map(x => `${x.nome || '(vazio)'} — ${x.erro}`).join('; ')}.`);
+
+  const falhas = r.resultados.filter(x => x.falha);
+  if (falhas.length) linhas.push('', `Falharam na busca por erro no portal (${falhas.length}) — nome válido, tente de novo: ` +
+    `${falhas.map(x => `${x.nome} — ${cel(x.falha)}`).join('; ')}.`);
+
+  const naoConsultados = r.resultados.filter(x => x.nao_consultado).map(x => x.nome);
+  if (naoConsultados.length) linhas.push('', `Não consultados (${naoConsultados.length}): ${naoConsultados.join('; ')}. Rode o lote de novo com esses nomes.`);
+
+  if (r.arquivo_lote) linhas.push('', `Arquivo do lote: ${r.arquivo_lote}`);
+  linhas.push('', AVISO_LOTE);
+  return linhas.join('\n');
+}

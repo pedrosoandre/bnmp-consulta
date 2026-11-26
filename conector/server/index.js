@@ -7,8 +7,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { GerenteDeConsulta } from './gerente.js';
-import { criarExecutor } from './consulta.js';
-import { formatarEstado } from './texto.js';
+import { criarExecutor, criarExecutorLote } from './consulta.js';
+import { formatarEstado, formatarLote } from './texto.js';
 
 function pastaDeSaida() {
   const v = (process.env.BNMP_PASTA || '').trim();
@@ -17,10 +17,13 @@ function pastaDeSaida() {
 }
 
 const pasta = pastaDeSaida();
-const gerente = new GerenteDeConsulta({ executar: criarExecutor({ pastaSaida: pasta }) });
+const gerente = new GerenteDeConsulta({
+  executar: criarExecutor({ pastaSaida: pasta }),
+  executarLote: criarExecutorLote({ pastaSaida: pasta }),
+});
 const ESPERA_POR_CHAMADA_MS = 40_000;
 
-const server = new McpServer({ name: 'bnmp-consulta', version: '0.1.1' });
+const server = new McpServer({ name: 'bnmp-consulta', version: '0.2.1' });
 const texto = t => ({ content: [{ type: 'text', text: t }] });
 
 server.registerTool('consultar_mandados_bnmp', {
@@ -59,7 +62,35 @@ server.registerTool('resultado_consulta_bnmp', {
   annotations: { readOnlyHint: true, openWorldHint: false },
 }, async () => {
   const e = await gerente.aguardar(ESPERA_POR_CHAMADA_MS);
-  return { ...texto(formatarEstado(e)), isError: e.status === 'erro' };
+  const txt = e.lote ? formatarLote(e) : formatarEstado(e);
+  return { ...texto(txt), isError: e.status === 'erro' };
+});
+
+server.registerTool('consultar_mandados_bnmp_em_lote', {
+  title: 'Consultar vários nomes no BNMP (um captcha para vários)',
+  description:
+    'Começa uma consulta de VÁRIOS nomes no BNMP numa só janela: a pessoa marca o captcha uma vez e o conector ' +
+    'consulta os nomes em sequência, pedindo um novo captcha a cada 10 nomes (ou se a sessão cair). ' +
+    'Use quando a pessoa der uma lista de nomes. Responde na hora; depois diga para marcar "Não sou um robô" ' +
+    'e chame resultado_consulta_bnmp (repita enquanto o status for "em_andamento"). ' +
+    'Curingas como * não são aceitos; nomes repetidos ou inválidos são descartados.',
+  inputSchema: {
+    nomes: z.array(z.string()).min(1).describe('Lista de nomes completos a consultar'),
+    baixar_pdfs: z.boolean().optional().describe('Baixar o PDF oficial de cada mandado (padrão: não)'),
+    max_paginas: z.number().int().min(1).max(10).optional().describe('Páginas de resultado por nome (padrão 3)'),
+  },
+  annotations: { readOnlyHint: false, openWorldHint: true, idempotentHint: false, destructiveHint: false },
+}, async ({ nomes, baixar_pdfs, max_paginas }) => {
+  try {
+    gerente.iniciarLote(nomes, { baixarPdfs: !!baixar_pdfs, maxPaginas: max_paginas ?? 3 });
+  } catch (e) {
+    return { ...texto(String(e.message)), isError: true };
+  }
+  return texto(
+    `Lote iniciado (${gerente.estado().nome}). Uma janela do navegador está abrindo com o portal do BNMP.\n` +
+    'Peça à pessoa: marque "Não sou um robô" nessa janela e deixe-a aberta. Um captcha vale para até 10 nomes; ' +
+    'se houver mais, o portal pedirá o captcha de novo na mesma janela.\n' +
+    'Em seguida chame resultado_consulta_bnmp (repita até concluir).');
 });
 
 server.registerTool('cancelar_consulta_bnmp', {

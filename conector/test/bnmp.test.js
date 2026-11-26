@@ -157,3 +157,30 @@ test('horaLocalIso usa o horário do computador, não UTC (a consulta saiu 15:18
   const { horaLocalIso } = await import('../server/bnmp.js');
   assert.equal(horaLocalIso(new Date(2026, 10, 26, 12, 18, 30)), '2026-11-26T12:18:30');
 });
+
+// ---- gerente: lote (um captcha para vários nomes) ----
+import { GerenteDeConsulta as G2 } from '../server/gerente.js';
+
+test('gerente.iniciarLote recusa lista vazia ou só com nomes inválidos', () => {
+  const g = new G2({ executar: async () => ({}), executarLote: async () => ({}) });
+  assert.throws(() => g.iniciarLote([], {}), /nenhum nome|lista/i);
+  assert.throws(() => g.iniciarLote(['*', 'ab'], {}), /nenhum nome v[aá]lido/i);
+});
+
+test('gerente.iniciarLote roda o executor de lote e guarda o resultado', async () => {
+  let recebidos;
+  const executarLote = async (nomes) => { recebidos = nomes; return { resultados: [], resumo: { consultados: 0 } }; };
+  const g = new G2({ executar: async () => ({}), executarLote });
+  const ini = g.iniciarLote(['Maria da Silva', 'Joao de Souza'], {});
+  assert.equal(ini.status, 'em_andamento');
+  assert.equal(ini.lote, true);
+  const fim = await g.aguardar(1000);
+  assert.equal(fim.status, 'concluida');
+  assert.deepEqual(recebidos, ['Maria da Silva', 'Joao de Souza']);
+});
+
+test('gerente: não aceita lote enquanto uma consulta roda', () => {
+  const g = new G2({ executar: () => new Promise(() => {}), executarLote: async () => ({}) });
+  g.iniciar('Maria da Silva', {});
+  assert.throws(() => g.iniciarLote(['Joao de Souza', 'Ana Lima'], {}), /andamento/);
+});
