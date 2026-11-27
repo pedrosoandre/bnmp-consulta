@@ -141,3 +141,9 @@ def test_resultado_e_gravado_antes_de_fechar_o_navegador(monkeypatch, capsys, tm
 ])
 def test_tribunal_pelo_numero_cnj(processo, esperado):
     assert cb.tribunal_de(processo) == esperado
+
+
+def test_url_da_pagina_cria_ou_troca_o_parametro():
+    assert cb.url_da_pagina("https://x/filter?page=0&size=10", 2) == "https://x/filter?size=10&page=2"
+    assert cb.url_da_pagina("https://x/filter?size=10", 1) == "https://x/filter?size=10&page=1"
+    assert cb.url_da_pagina("https://x/filter", 3) == "https://x/filter?page=3"

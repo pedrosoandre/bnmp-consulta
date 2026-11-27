@@ -1,7 +1,7 @@
 {
   "name": "bnmp-consulta",
   "description": "Consulta de mandados de prisão por nome no BNMP (CNJ), com o captcha resolvido pela própria pessoa, e guia para integrar a consulta em qualquer sistema.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": { "name": "pedrosoandre" },
   "homepage": "https://github.com/pedrosoandre/bnmp-consulta",
   "repository": "https://github.com/pedrosoandre/bnmp-consulta",

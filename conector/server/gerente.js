@@ -30,6 +30,9 @@ export class GerenteDeConsulta {
   }
 
   _exigirLivre() {
+    if (this.encerrando) {
+      throw new Error('A consulta cancelada ainda está fechando a janela do navegador. Tente de novo em alguns segundos.');
+    }
     if (this.atual && this.atual.status === 'em_andamento') {
       throw new Error(`Já existe uma consulta em andamento (${this.atual.nome}). Aguarde ou cancele antes de começar outra.`);
     }
@@ -69,6 +72,11 @@ export class GerenteDeConsulta {
     if (!c) return { status: 'ocioso' };
     this.atual = null;
     c.controle.abort();
+    if (c.status === 'em_andamento') {
+      // Só libera uma nova consulta depois que a janela antiga fechar (evita duas janelas abertas).
+      const fim = c.promessa.finally(() => { if (this.encerrando === fim) this.encerrando = null; });
+      this.encerrando = fim;
+    }
     return { status: 'ocioso', cancelada: c.status === 'em_andamento' ? c.nome : null };
   }
 }

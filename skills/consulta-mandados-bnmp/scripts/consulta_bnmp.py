@@ -25,6 +25,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 URL = "https://portalbnmp.cnj.jus.br/#/pesquisa-peca"
 API = "https://portalbnmp.cnj.jus.br/bnmpportal/api"
@@ -160,6 +161,18 @@ def montar_resultado(busca: str, paginas: list, consultado_em: str) -> dict:
     }
 
 
+def url_da_pagina(url: str, n: int) -> str:
+    """A mesma URL de pesquisa, na página n (cria o parâmetro page se faltar)."""
+    partes = urlsplit(url)
+    q = [(k, v) for k, v in parse_qsl(partes.query, keep_blank_values=True) if k != "page"]
+    q.append(("page", str(n)))
+    return urlunsplit(partes._replace(query=urlencode(q)))
+
+
+MAX_PDFS = 20
+LIMITE_PDF = 20 * 1024 * 1024
+
+
 def nome_arquivo(texto) -> str:
     return re.sub(r"[^\w.\-]+", "_", str(texto or "")).strip("._-") or "mandado"
 
@@ -231,7 +244,7 @@ def consultar(nome: str, saida: Path, pdf: bool, max_paginas: int, espera_s: int
             url0, corpo = resp.request.url, resp.request.post_data
             for n in range(1, min(total_paginas, max_paginas)):
                 page.wait_for_timeout(1500)
-                url = re.sub(r"([?&]page=)\d+", rf"\g<1>{n}", url0)
+                url = url_da_pagina(url0, n)
                 r = page.evaluate(JS_JSON, [url, corpo])
                 if r["status"] != 200:
                     raise _status_para_falha(r["status"])
@@ -244,12 +257,20 @@ def consultar(nome: str, saida: Path, pdf: bool, max_paginas: int, espera_s: int
             if pdf and res["mandados"]:
                 pasta = saida / "pdf"
                 pasta.mkdir(parents=True, exist_ok=True)
-                for i, m in enumerate(res["mandados"], 1):
+                alvo = res["mandados"][:MAX_PDFS]
+                if len(res["mandados"]) > MAX_PDFS:
+                    _avisar(f"Aviso: baixo os PDFs só dos primeiros {MAX_PDFS} mandados.")
+                for i, m in enumerate(alvo, 1):
+                    if not (str(m.get("id", "")).isdigit() and str(m.get("id_tipo_peca", "")).isdigit()):
+                        continue  # ids vêm do portal: só números entram na URL
                     page.wait_for_timeout(1000)
                     r = page.evaluate(JS_PDF, [f"{API}/certidaos/relatorio/{m['id']}/{m['id_tipo_peca']}"])
-                    if r["status"] == 403:
-                        raise _status_para_falha(403)
+                    if r["status"] in (401, 403, 429):
+                        raise _status_para_falha(r["status"])
                     dados = base64.b64decode(r["dados"] or "") if r["status"] == 200 else b""
+                    if len(dados) > LIMITE_PDF:
+                        _avisar(f"[{i}/{len(alvo)}] PDF grande demais, ignorado ({m['numero']}).")
+                        continue
                     if dados[:5] != b"%PDF-":
                         _avisar(f"[{i}/{len(res['mandados'])}] PDF não veio ({m['numero']}, status {r['status']}).")
                         continue
@@ -270,7 +291,7 @@ def main(argv=None) -> int:
     ap.add_argument("nome", help="nome completo da pessoa")
     ap.add_argument("--pdf", action="store_true", help="baixa o PDF de cada mandado encontrado")
     ap.add_argument("--saida", default="bnmp-saida", help="pasta do JSON e dos PDFs (padrão: ./bnmp-saida)")
-    ap.add_argument("--max-paginas", type=int, default=10, help="limite de páginas de resultado (10 por página)")
+    ap.add_argument("--max-paginas", type=int, default=3, help="limite de páginas de resultado (10 por página; padrão 3)")
     ap.add_argument("--espera", type=int, default=300, help="segundos para a pessoa resolver o captcha")
     a = ap.parse_args(argv)
     for fluxo in (sys.stdout, sys.stderr):  # quem chama lê UTF-8; no Windows o padrão seria cp1252

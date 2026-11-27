@@ -5,7 +5,7 @@ import { validarNome } from './bnmp.js';
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 const sessaoExpirou = e => /\b401\b|sess[aã]o/i.test(String(e && e.message || e));
-const bloqueou = e => /\b40[39]\b/.test(String(e && e.message || e)); // 403 ou 429: parar
+const bloqueou = e => /\b(403|429)\b/.test(String(e && e.message || e)); // 403 ou 429: parar
 
 /**
  * @param {object} p

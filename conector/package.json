@@ -1,6 +1,6 @@
 {
   "name": "bnmp-consulta-conector",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Conector (MCP) do Claude Desktop para consultar mandados de prisão no BNMP (CNJ), com o captcha resolvido pela própria pessoa.",
   "type": "module",
@@ -16,6 +16,6 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
     "playwright-core": "1.65.1",
-    "zod": "3.25.76"
+    "zod": "4.6.7"
   }
 }

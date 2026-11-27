@@ -3,3 +3,8 @@ ferramentas/
 icone.html
 *.mcpb
 .gitignore
+
+# tipos, mapas e docs das dependências não são usados em tempo de execução
+node_modules/**/*.d.ts
+node_modules/**/*.map
+node_modules/**/*.md

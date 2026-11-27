@@ -19,6 +19,7 @@ export function validarNome(nome) {
   const limpo = String(nome ?? '').replace(/\s+/g, ' ').trim();
   if (/[*%?]/.test(limpo)) throw new Error('Curinga (*, %, ?) não é aceito: informe o nome da pessoa.');
   if ((limpo.match(/\p{L}/gu) || []).length < 3) throw new Error('Informe o nome da pessoa (pelo menos 3 letras).');
+  if (limpo.length > 120) throw new Error('Nome longo demais (máximo de 120 caracteres).');
   return limpo;
 }
 
@@ -102,7 +103,7 @@ export function montarResultado(busca, paginas, consultadoEm) {
 
 export function nomeArquivo(texto) {
   const s = String(texto ?? '').replace(/[^\p{L}\p{N}_.-]+/gu, '_').replace(/^[._-]+|[._-]+$/g, '');
-  return s || 'mandado';
+  return s.slice(0, 80) || 'mandado';
 }
 
 /** A mesma chamada de pesquisa que a página fez, na página n (cria o parâmetro se faltar). */

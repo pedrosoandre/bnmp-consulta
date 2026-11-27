@@ -1,5 +1,5 @@
-﻿// Executor real: abre o portal num navegador VISÃVEL, espera a pessoa marcar o captcha e lÃª o resultado
-// que o prÃ³prio portal devolve Ã  pÃ¡gina. NÃ£o resolve nem contorna o captcha.
+// Executor real: abre o portal num navegador VISÍVEL, espera a pessoa marcar o captcha e lê o resultado
+// que o próprio portal devolve à página. Não resolve nem contorna o captcha.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -13,14 +13,14 @@ const BOTAO_PESQUISAR = 'span.ui-button-text';
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
 function falhaDoStatus(status) {
-  if (status === 403) return new Error('O portal bloqueou o acesso (403). Pare por hoje; nÃ£o insista nem troque de rede.');
-  if (status === 401) return new Error('O portal nÃ£o aceitou a sessÃ£o (401): o captcha nÃ£o foi validado ou expirou. Tente de novo.');
+  if (status === 403) return new Error('O portal bloqueou o acesso (403). Pare por hoje; não insista nem troque de rede.');
+  if (status === 401) return new Error('O portal não aceitou a sessão (401): o captcha não foi validado ou expirou. Tente de novo.');
   if (status === 429) return new Error('O portal pediu para desacelerar (429). Tente mais tarde.');
   return new Error(`O portal respondeu com erro (status ${status}).`);
 }
 
-// Faixa fixa no topo do portal, sÃ³ informativa (nÃ£o clica nem preenche nada).
-// Reaplicada a cada carregamento de pÃ¡gina; o texto muda conforme a etapa.
+// Faixa fixa no topo do portal, só informativa (não clica nem preenche nada).
+// Reaplicada a cada carregamento de página; o texto muda conforme a etapa.
 function scriptFaixa() {
   const montar = () => {
     if (!document.body || document.getElementById('bnmp-claude-faixa')) return;
@@ -30,7 +30,7 @@ function scriptFaixa() {
     f.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;pointer-events:none;'
       + 'background:#1f2a44;color:#fff;font:600 14px/1.4 "Segoe UI",system-ui,sans-serif;'
       + 'padding:10px 16px;box-shadow:0 2px 8px rgba(0,0,0,.25);text-align:center';
-    f.textContent = window.__bnmpFaixa || 'Marque "NÃ£o sou um robÃ´" abaixo. O Claude faz o resto e esta janela fecha sozinha.';
+    f.textContent = window.__bnmpFaixa || 'Marque "Não sou um robô" abaixo. O Claude faz o resto e esta janela fecha sozinha.';
     document.body.style.paddingTop = '44px';
     document.body.appendChild(f);
   };
@@ -45,9 +45,9 @@ async function mudarFaixa(page, texto) {
   }, texto).catch(() => {});
 }
 
-// Abre uma janela compacta em modo app (sem abas nem barra de endereÃ§o), no canto direito da tela.
-// Perfil temporÃ¡rio e descartÃ¡vel; navegador visÃ­vel, porque o headless leva 403 do portal.
-// O navegador Ã s vezes ainda segura arquivos do perfil logo depois de fechar; tenta algumas vezes.
+// Abre uma janela compacta em modo app (sem abas nem barra de endereço), no canto direito da tela.
+// Perfil temporário e descartável; navegador visível, porque o headless leva 403 do portal.
+// O navegador às vezes ainda segura arquivos do perfil logo depois de fechar; tenta algumas vezes.
 async function apagarPerfil(pasta) {
   for (let i = 0; i < 6; i++) {
     try { await fs.rm(pasta, { recursive: true, force: true }); return; } catch { await espera(500); }
@@ -77,29 +77,41 @@ async function abrirJanela() {
       const contexto = await chromium.launchPersistentContext(perfil, { channel, headless: false, viewport: null, args });
       await contexto.addInitScript(scriptFaixa);
       const page = contexto.pages()[0] || await contexto.newPage();
-      const fechar = async () => {
-        // O Edge Ã s vezes demora a fechar; o resultado jÃ¡ estÃ¡ pronto, entÃ£o nÃ£o esperamos mais que 5 s.
+      let fechando = null;
+      const fechar = () => (fechando ??= (async () => {
+        // O Edge às vezes demora a fechar; o resultado já está pronto, então não esperamos mais que 5 s.
         await Promise.race([contexto.close().catch(() => {}), espera(5000)]);
         await apagarPerfil(perfil);
-      };
+      })());
       return { page, fechar };
     } catch (e) {
       erros.push(`${channel}: ${String(e.message).split('\n')[0]}`);
     }
   }
   await apagarPerfil(perfil);
-  throw new Error('NÃ£o encontrei o Microsoft Edge nem o Google Chrome neste computador. Instale um deles e tente de novo.\n' + erros.join('\n'));
+  throw new Error('Não encontrei o Microsoft Edge nem o Google Chrome neste computador. Instale um deles e tente de novo.\n' + erros.join('\n'));
 }
+
+// O portal às vezes devolve HTML (manutenção, erro) no lugar de JSON.
+async function lerJson(obterTexto) {
+  const t = await obterTexto();
+  try { return JSON.parse(t); } catch {
+    throw new Error('O portal devolveu uma resposta inesperada (não é JSON). Pode estar em manutenção; tente mais tarde.');
+  }
+}
+
+const LIMITE_PDF = 20 * 1024 * 1024;
+const ehId = v => /^\d+$/.test(String(v ?? ''));
 
 function traduzirErro(e) {
   const msg = String(e && e.message || e);
   if (/closed|Target page|has been closed/i.test(msg)) {
-    return new Error('A janela do navegador foi fechada antes de terminar. PeÃ§a a consulta de novo e deixe a janela aberta.');
+    return new Error('A janela do navegador foi fechada antes de terminar. Peça a consulta de novo e deixe a janela aberta.');
   }
   return e instanceof Error ? e : new Error(msg);
 }
 
-// Abre o portal e espera a pessoa marcar o captcha (o campo Nome sÃ³ fica acessÃ­vel depois disso).
+// Abre o portal e espera a pessoa marcar o captcha (o campo Nome só fica acessível depois disso).
 async function validarCaptcha(page, esperaCaptchaS) {
   await page.goto(URL_PORTAL, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.bringToFront();
@@ -107,12 +119,12 @@ async function validarCaptcha(page, esperaCaptchaS) {
   try {
     await campo.waitFor({ state: 'visible', timeout: esperaCaptchaS * 1000 });
   } catch (e) {
-    if (e.name === 'TimeoutError') throw new Error(`O captcha nÃ£o foi marcado em ${Math.round(esperaCaptchaS / 60)} minutos. PeÃ§a a consulta de novo.`);
+    if (e.name === 'TimeoutError') throw new Error(`O captcha não foi marcado em ${Math.round(esperaCaptchaS / 60)} minutos. Peça a consulta de novo.`);
     throw e;
   }
 }
 
-// Pesquisa UM nome na sessÃ£o jÃ¡ validada e devolve o resultado (com PDFs, se pedido).
+// Pesquisa UM nome na sessão já validada e devolve o resultado (com PDFs, se pedido).
 async function pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, pastaSaida }, progresso) {
   const campo = page.locator(CAMPO_NOME);
   await esperarCampoPronto({
@@ -129,7 +141,7 @@ async function pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, past
     page.locator(BOTAO_PESQUISAR, { hasText: 'Pesquisar' }).first().click(),
   ]);
   if (resp.status() !== 200) throw falhaDoStatus(resp.status());
-  const primeira = await resp.json();
+  const primeira = await lerJson(() => resp.text());
   const paginas = [primeira];
 
   const totalPaginas = Number(primeira.totalPages || 1);
@@ -146,7 +158,7 @@ async function pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, past
       } catch (e) { return { status: 0, dados: String(e) }; }
     }, [urlDaPagina(url0, n), corpo]);
     if (r.status !== 200) throw falhaDoStatus(r.status);
-    paginas.push(JSON.parse(r.dados));
+    paginas.push(await lerJson(async () => r.dados));
   }
 
   const res = montarResultado(nome, juntarSemRepetir(paginas), horaLocalIso());
@@ -160,20 +172,22 @@ async function pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, past
     let baixados = 0;
     for (let i = 0; i < alvo.length; i++) {
       const m = alvo[i];
+      if (!ehId(m.id) || !ehId(m.id_tipo_peca)) continue; // ids vêm do portal: só números entram na URL
       progresso(`baixando_pdfs ${i + 1}/${alvo.length}`);
       await page.waitForTimeout(1000);
-      const r = await page.evaluate(async url => {
+      const r = await page.evaluate(async ([url, limite]) => {
         try {
           const x = await fetch(url, { method: 'POST', credentials: 'include',
             headers: { accept: 'application/json, text/plain, */*', fingerprint: '' } });
           const blob = await x.blob();
+          if (blob.size > limite) return { status: x.status, dados: '' };
           const b64 = await new Promise((ok, erro) => { const fr = new FileReader();
             fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = erro; fr.readAsDataURL(blob); });
           return { status: x.status, dados: b64 };
         } catch (e) { return { status: 0, dados: '' }; }
-      }, `${API}/certidaos/relatorio/${m.id}/${m.id_tipo_peca}`);
-      if (r.status === 401 || r.status === 403) {
-        res.aviso_pdfs = `A sessÃ£o do portal parou de aceitar downloads (status ${r.status}) depois de ${baixados} PDF(s). A tabela estÃ¡ completa; peÃ§a os PDFs que faltaram numa nova consulta.`;
+      }, [`${API}/certidaos/relatorio/${m.id}/${m.id_tipo_peca}`, LIMITE_PDF]);
+      if (r.status === 401 || r.status === 403 || r.status === 429) {
+        res.aviso_pdfs = `A sessão do portal parou de aceitar downloads (status ${r.status}) depois de ${baixados} PDF(s). A tabela está completa; peça os PDFs que faltaram numa nova consulta.`;
         break;
       }
       const dados = r.status === 200 ? Buffer.from(r.dados || '', 'base64') : Buffer.alloc(0);
@@ -195,7 +209,7 @@ async function pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, past
   return res;
 }
 
-// Consulta de um nome sÃ³.
+// Consulta de um nome só.
 export function criarExecutor({ pastaSaida }) {
   return async function executar(nome, opcoes, progresso) {
     const { baixarPdfs = false, maxPaginas = 3, maxPdfs = 20, esperaCaptchaS = 300, sinal } = opcoes;
@@ -209,7 +223,7 @@ export function criarExecutor({ pastaSaida }) {
       progresso('aguardando_captcha');
       await validarCaptcha(page, esperaCaptchaS);
       progresso('pesquisando');
-      await mudarFaixa(page, 'Captcha ok. Pesquisando... nÃ£o feche esta janela.');
+      await mudarFaixa(page, 'Captcha ok. Pesquisando... não feche esta janela.');
       return await pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, pastaSaida }, progresso);
     } catch (e) {
       if (sinal?.aborted) throw new Error('cancelada');
@@ -221,7 +235,7 @@ export function criarExecutor({ pastaSaida }) {
   };
 }
 
-// Consulta em lote: um captcha serve para atÃ© `maxPorCaptcha` nomes, na mesma janela.
+// Consulta em lote: um captcha serve para até `maxPorCaptcha` nomes, na mesma janela.
 export function criarExecutorLote({ pastaSaida }) {
   return async function executarLote(nomes, opcoes, progresso) {
     const { baixarPdfs = false, maxPaginas = 3, maxPdfs = 20, esperaCaptchaS = 300, maxPorCaptcha = 10, pausaMs = 1500, sinal } = opcoes;
@@ -236,15 +250,15 @@ export function criarExecutorLote({ pastaSaida }) {
         maxPorCaptcha,
         pausaMs,
         abrirSessao: async () => {
-          await mudarFaixa(page, 'Marque "NÃ£o sou um robÃ´" abaixo. O Claude faz o resto e esta janela fecha sozinha.');
+          await mudarFaixa(page, 'Marque "Não sou um robô" abaixo. O Claude faz o resto e esta janela fecha sozinha.');
           await validarCaptcha(page, esperaCaptchaS);
-          await mudarFaixa(page, 'Captcha ok. Pesquisando os nomes... nÃ£o feche esta janela.');
+          await mudarFaixa(page, 'Captcha ok. Pesquisando os nomes... não feche esta janela.');
         },
         pesquisar: (nome, prog) => pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, pastaSaida }, prog),
       };
       const lote = await rodarLote({ nomes, progresso, sinal, deps });
 
-      // Guarda o lote inteiro num arquivo, alÃ©m dos JSONs por nome.
+      // Guarda o lote inteiro num arquivo, além dos JSONs por nome.
       await fs.mkdir(pastaSaida, { recursive: true });
       const arquivo = path.join(pastaSaida, `lote_${horaLocalIso().replace(/[-:]/g, '').replace('T', '_')}.json`);
       await fs.writeFile(arquivo, JSON.stringify(lote, null, 2), 'utf8');

@@ -23,7 +23,7 @@ const gerente = new GerenteDeConsulta({
 });
 const ESPERA_POR_CHAMADA_MS = 40_000;
 
-const server = new McpServer({ name: 'bnmp-consulta', version: '0.3.0' });
+const server = new McpServer({ name: 'bnmp-consulta', version: '0.3.1' });
 const texto = t => ({ content: [{ type: 'text', text: t }] });
 
 server.registerTool('consultar_mandados_bnmp', {
@@ -35,7 +35,7 @@ server.registerTool('consultar_mandados_bnmp', {
     'então chame resultado_consulta_bnmp (repita enquanto o status for "em_andamento"). ' +
     'Uma consulta por vez; curingas como * não são aceitos. O captcha é sempre resolvido pela pessoa.',
   inputSchema: {
-    nome: z.string().describe('Nome completo da pessoa'),
+    nome: z.string().max(120).describe('Nome completo da pessoa'),
     baixar_pdfs: z.boolean().optional().describe('Baixar o PDF oficial de cada mandado (padrão: não)'),
     max_paginas: z.number().int().min(1).max(10).optional().describe('Páginas de resultado a ler, 10 mandados cada (padrão 3)'),
     resposta_curta: z.boolean().optional().describe('Responder só SIM/NÃO (com nº de mandados e aviso de homônimo), sem a tabela. Use quando a pessoa só quer saber se há mandado para o nome.'),
@@ -78,7 +78,7 @@ server.registerTool('consultar_mandados_bnmp_em_lote', {
     'e chame resultado_consulta_bnmp (repita enquanto o status for "em_andamento"). ' +
     'Curingas como * não são aceitos; nomes repetidos ou inválidos são descartados.',
   inputSchema: {
-    nomes: z.array(z.string()).min(1).describe('Lista de nomes completos a consultar'),
+    nomes: z.array(z.string().max(120)).min(1).max(50).describe('Lista de nomes completos a consultar (até 50)'),
     baixar_pdfs: z.boolean().optional().describe('Baixar o PDF oficial de cada mandado (padrão: não)'),
     max_paginas: z.number().int().min(1).max(10).optional().describe('Páginas de resultado por nome (padrão 3)'),
   },
