@@ -16,3 +16,19 @@ test('pasta do conector não tem arquivos vazios fora de node_modules', () => {
   andar(path.resolve(import.meta.dirname, '..'));
   assert.deepEqual(vazios, []);
 });
+
+// O manifesto promete uma versão mínima do Node: ela não pode ser menor que a exigida pelas dependências.
+test('versão mínima do Node no manifesto cobre a das dependências', () => {
+  const raiz = path.resolve(import.meta.dirname, '..');
+  const minimo = faixa => Number((/>=\s*(\d+)/.exec(faixa || '') || [])[1] || 0);
+  const manifesto = JSON.parse(fs.readFileSync(path.join(raiz, 'manifest.json'), 'utf8'));
+  const prometido = minimo(manifesto.compatibility.runtimes.node);
+  const pacote = JSON.parse(fs.readFileSync(path.join(raiz, 'package.json'), 'utf8'));
+  const exigencias = Object.keys(pacote.dependencies).map(d => {
+    const p = JSON.parse(fs.readFileSync(path.join(raiz, 'node_modules', d, 'package.json'), 'utf8'));
+    return [d, minimo(p.engines && p.engines.node)];
+  });
+  const acima = exigencias.filter(([, v]) => v > prometido);
+  assert.deepEqual(acima, [], `manifesto promete Node >=${prometido}`);
+  assert.equal(minimo(pacote.engines.node), prometido, 'package.json e manifest.json devem dizer o mesmo');
+});

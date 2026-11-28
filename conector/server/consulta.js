@@ -210,12 +210,14 @@ async function pesquisarNome(page, nome, { baixarPdfs, maxPaginas, maxPdfs, past
 }
 
 // Consulta de um nome só.
-export function criarExecutor({ pastaSaida }) {
+export function criarExecutor({ pastaSaida, abrirJanela: abrir = abrirJanela }) {
   return async function executar(nome, opcoes, progresso) {
     const { baixarPdfs = false, maxPaginas = 3, maxPdfs = 20, esperaCaptchaS = 300, sinal } = opcoes;
     if (sinal?.aborted) throw new Error('cancelada');
     progresso('abrindo_navegador');
-    const janela = await abrirJanela();
+    const janela = await abrir();
+    // Cancelada enquanto o navegador abria: o aviso de abort já passou, então fecha aqui.
+    if (sinal?.aborted) { await janela.fechar(); throw new Error('cancelada'); }
     const aoCancelar = () => { janela.fechar(); };
     sinal?.addEventListener('abort', aoCancelar);
     try {
@@ -236,12 +238,14 @@ export function criarExecutor({ pastaSaida }) {
 }
 
 // Consulta em lote: um captcha serve para até `maxPorCaptcha` nomes, na mesma janela.
-export function criarExecutorLote({ pastaSaida }) {
+export function criarExecutorLote({ pastaSaida, abrirJanela: abrir = abrirJanela }) {
   return async function executarLote(nomes, opcoes, progresso) {
     const { baixarPdfs = false, maxPaginas = 3, maxPdfs = 20, esperaCaptchaS = 300, maxPorCaptcha = 10, pausaMs = 1500, sinal } = opcoes;
     if (sinal?.aborted) throw new Error('cancelada');
     progresso('abrindo_navegador');
-    const janela = await abrirJanela();
+    const janela = await abrir();
+    // Cancelada enquanto o navegador abria: o aviso de abort já passou, então fecha aqui.
+    if (sinal?.aborted) { await janela.fechar(); throw new Error('cancelada'); }
     const aoCancelar = () => { janela.fechar(); };
     sinal?.addEventListener('abort', aoCancelar);
     try {

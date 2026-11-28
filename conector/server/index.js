@@ -23,7 +23,7 @@ const gerente = new GerenteDeConsulta({
 });
 const ESPERA_POR_CHAMADA_MS = 40_000;
 
-const server = new McpServer({ name: 'bnmp-consulta', version: '0.3.1' });
+const server = new McpServer({ name: 'bnmp-consulta', version: '0.3.2' });
 const texto = t => ({ content: [{ type: 'text', text: t }] });
 
 server.registerTool('consultar_mandados_bnmp', {
